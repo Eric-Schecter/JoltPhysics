@@ -2,7 +2,7 @@ from conan import ConanFile
 from conan.errors import ConanInvalidConfiguration
 from conan.tools.build import check_min_cppstd
 from conan.tools.cmake import CMake, CMakeToolchain, cmake_layout
-from conan.tools.files import apply_conandata_patches, copy, export_conandata_patches, get
+from conan.tools.files import copy, export_conandata_patches, get
 from conan.tools.microsoft import is_msvc, is_msvc_static_runtime
 from conan.tools.scm import Version
 import os
@@ -39,6 +39,8 @@ class JoltPhysicsConan(ConanFile):
         "profile": False,
     }
 
+    exports_sources = ["*"]
+
     @property
     def _min_cppstd(self):
         return "17"
@@ -73,9 +75,6 @@ class JoltPhysicsConan(ConanFile):
     def _has_avx512(self):
         return self.options.get_safe("simd") == "avx512"
 
-    def export_sources(self):
-        export_conandata_patches(self)
-
     def config_options(self):
         if self.settings.os == "Windows":
             del self.options.fPIC
@@ -87,7 +86,7 @@ class JoltPhysicsConan(ConanFile):
             self.options.rm_safe("fPIC")
 
     def layout(self):
-        cmake_layout(self, src_folder="src")
+        cmake_layout(self, src_folder=".")
 
     def build_requirements(self):
         self.tool_requires("cmake/[>=3.16 <4]")
@@ -110,9 +109,6 @@ class JoltPhysicsConan(ConanFile):
 
         if is_msvc(self) and self.options.shared:
             raise ConanInvalidConfiguration(f"{self.ref} shared not supported with Visual Studio")
-
-    def source(self):
-        get(self, **self.conan_data["sources"][self.version], strip_root=True)
 
     def generate(self):
         tc = CMakeToolchain(self)
@@ -137,9 +133,8 @@ class JoltPhysicsConan(ConanFile):
         tc.generate()
 
     def build(self):
-        apply_conandata_patches(self)
         cmake = CMake(self)
-        cmake.configure(build_script_folder=os.path.join(self.source_folder, "Build"))
+        cmake.configure(build_script_folder="Build")
         cmake.build()
 
     def package(self):
